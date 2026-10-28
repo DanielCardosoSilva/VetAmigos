@@ -10,7 +10,7 @@ class AnimalRepository:
 
     def listar_todos(self):
         with get_connection() as conn:
-            rows = conn.execute("SELECT * FROM animais").fetchall()
+            rows = conn.execute("SELECT * FROM animal").fetchall()
         return [
             Animal(
                 id=r[id]
