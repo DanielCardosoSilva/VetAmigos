@@ -3,7 +3,7 @@ from datetime import date
 #o nome, espécie, raça, data de nascimento e peso do animal e seleciono esse dono de animal
 class Animal: 
     def __init__(self, nome, especie, data_nasc, peso_animal, nif_cliente, id=): 
-        self.id         = none
+        self.id         = None
         self.nome       = nome
         self.especie    = especie
         self.data_nasc  = data_nasc
