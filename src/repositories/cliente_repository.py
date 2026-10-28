@@ -8,8 +8,8 @@ class ClienteRepository:
         """Insere um novo cliente na base de dados SQL Server / SQLite."""
         with get_connection() as conn:
             cur = conn.execute(
-                "INSERT INTO clientes (nome, nif, telefone, email, morada) VALUES (?, ?, ?, ?, ?)",
-                (cliente.nome, cliente.nif, cliente.telefone, cliente.email, cliente.morada)
+                "INSERT INTO clientes (nome, nif, telefone, email, morada) VALUES (?, ?, ?, ?)",
+                (cliente.nome, cliente.nif, cliente.telefone, cliente.email)
             )
             cliente.id = cur.lastrowid
         return cliente
@@ -25,7 +25,6 @@ class ClienteRepository:
                 nif=r["nif"],
                 telefone=r["telefone"],
                 email=r["email"]
-                morada=r["morada"]
             ) for r in rows
         ]
 
@@ -40,7 +39,6 @@ class ClienteRepository:
                     nif=row["nif"],
                     telefone=row["telefone"],
                     email=row["email"],
-                    morada=row["morada"]
                 )
         return None
 
@@ -55,6 +53,5 @@ class ClienteRepository:
                     nif=row["nif"],
                     telefone=row["telefone"],
                     email=row["email"],
-                    morada=row["morada"]
                 )
         return None
