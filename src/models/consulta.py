@@ -1,4 +1,5 @@
-# src/models/consulta.py
+"""src/models/consulta.py"""
+
 from datetime import datetime
 
 

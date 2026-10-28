@@ -1,3 +1,5 @@
+"""src/repositories/consulta_repository.py"""
+
 from db.connection import get_connection
 from src.models.consulta import Consulta
 from datetime import datetime
@@ -62,6 +64,28 @@ class ConsultaRepository:
                 )
                 for r in rows
             ]
+
+    def obter_por_id(self, id_consulta):
+        with get_connection() as conn:
+            r = conn.execute(
+            "SELECT * FROM consultas WHERE id = ?",
+            (id_consulta,)
+            ).fetchone()
+
+        if r is None:
+            return None
+
+        return Consulta(
+            id=r["id"],
+            id_animal=r["id_animal"],
+            cedula_profissional=r["cedula_profissional"],
+            horario=datetime.fromisoformat(r["horario"]),
+            diagnostico=r["diagnostico"],
+            tratamento=r["tratamento"],
+            custo=r["custo"],
+            peso_registado=r["peso_registado"],
+            estado=r["estado"]
+        )
 
     def cancelar(self, id_consulta):
         with get_connection() as conn:

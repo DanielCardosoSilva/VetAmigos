@@ -1,5 +1,5 @@
--- sqlite
 -- db/schema.sql
+-- sqlite
 
 CREATE TABLE IF NOT EXISTS consultas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
