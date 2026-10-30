@@ -1,6 +1,8 @@
-# src/services/cliente_service.py
+"""src/services/cliente_service.py"""
+
 from src.models.cliente import Cliente
 from src.repositories.cliente_repository import ClienteRepository
+
 
 class ClienteService:
     def __init__(self, repo: ClienteRepository):
@@ -10,9 +12,9 @@ class ClienteService:
         """Valida se o NIF português possui 9 dígitos numéricos (RNF13)."""
         return len(nif) == 9 and nif.isdigit()
 
-    def registar(self, nome: str, nif: str, telefone: str, email: str, morada: str) -> Cliente:
+    def registar(self, nome: str, nif: str, telefone: str, email: str) -> Cliente:
         """
-        Alica as regras de negócio e validações para registar um novo cliente (US-01 / RF01 / RNF13).
+        Aplica as regras de negócio e validações para registar um novo cliente (US-01 / RF01 / RNF13).
         """
         # Validação 1: Campos não vazios
         if not nome or not nome.strip():
@@ -36,5 +38,5 @@ class ClienteService:
         return self._repo.inserir(cliente)
 
     def listar(self) -> list[Cliente]:
-        """Obtém a lista de todos os clientes cadastrados."""
+        """Obtém a lista de todos os clientes registados."""
         return self._repo.listar_todos()
