@@ -1,4 +1,4 @@
-# src/models/cliente.py
+"""src/models/cliente.py"""
 
 class Cliente:
     """
