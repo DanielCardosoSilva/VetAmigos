@@ -51,20 +51,25 @@ class ConsultaRepository:
                 (id_animal,)
             ).fetchall()
 
-            return [
-                Consulta(
-                    id_animal=r["id_animal"],
-                    cedula_profissional=r["cedula_profissional"],
-                    horario=datetime.fromisoformat(r["horario"]),
-                    diagnostico=r["diagnostico"],
-                    tratamento=r["tratamento"],
-                    custo=r["custo"],
-                    peso_registado=r["peso_registado"],
-                    estado=r["estado"]
-                )
-                for r in rows
-            ]
+        consultas = [
+            Consulta(
+                id_animal=r["id_animal"],
+                cedula_profissional=r["cedula_profissional"],
+                horario=datetime.fromisoformat(r["horario"]),
+                diagnostico=r["diagnostico"],
+                tratamento=r["tratamento"],
+                custo=r["custo"],
+                peso_registado=r["peso_registado"],
+                estado=r["estado"]
+            )
+            for r in rows
+        ]
 
+        for i in range(len(rows)):
+            consultas[i].id = rows[i]["id"]
+
+        return consultas
+    
     def obter_por_id(self, id_consulta):
         with get_connection() as conn:
             r = conn.execute(
