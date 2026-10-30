@@ -21,8 +21,6 @@ class ClienteService:
             raise ValueError("O contacto telefónico é obrigatório.")
         if not email or not email.strip():
             raise ValueError("O email é obrigatório.")
-        if not morada or not morada.strip():
-            raise ValueError("A morada é obrigatória.")
 
         # Validação 2: Formato do NIF (RNF13)
         nif_limpo = nif.strip()
@@ -34,7 +32,7 @@ class ClienteService:
             raise ValueError("Já existe um cliente registado com este NIF.")
 
         # Criação do objeto e persistência
-        cliente = Cliente(nome=nome.strip(), nif=nif_limpo, telefone=telefone.strip(), email=email.strip(), morada=morada.strip())
+        cliente = Cliente(nome=nome.strip(), nif=nif_limpo, telefone=telefone.strip(), email=email.strip())
         return self._repo.inserir(cliente)
 
     def listar(self) -> list[Cliente]:
