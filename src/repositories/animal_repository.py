@@ -35,3 +35,23 @@ class AnimalRepository:
             animais[i].id = rows[i]["id"]
 
         return animais
+
+    def obter_por_id(self, id_animal: int) -> Animal | None:
+        """Obtém um animal através do seu ID."""
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM animais WHERE id = ?", (id_animal,)
+            ).fetchone()
+
+        if row:
+            animal = Animal(
+                nome=row["nome"],
+                especie=row["especie"],
+                data_nasc=date.fromisoformat(row["data_nasc"]),
+                peso_animal=row["peso_animal"],
+                nif_cliente=row["nif_cliente"]
+            )
+            animal.id = row["id"]
+            return animal
+
+        return None
