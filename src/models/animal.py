@@ -1,8 +1,10 @@
+"""src/models/animal.py"""
+
 from datetime import date 
 
-#o nome, espécie, raça, data de nascimento e peso do animal e seleciono esse dono de animal
+#o nome, espécie, data de nascimento e peso do animal e seleciono esse dono de animal
 class Animal: 
-    def __init__(self, nome, especie, data_nasc, peso_animal, nif_cliente, id=): 
+    def __init__(self, nome, especie, data_nasc, peso_animal, nif_cliente): 
         self.id         = None
         self.nome       = nome
         self.especie    = especie

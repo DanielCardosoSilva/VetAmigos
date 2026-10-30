@@ -1,5 +1,3 @@
 # VetAmigos
 Projeto IEFP
 
-
-teste
