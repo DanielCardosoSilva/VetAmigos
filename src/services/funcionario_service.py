@@ -65,3 +65,11 @@ class FuncionarioService:
 
     def listar_todos(self):
         return self._repo.listar_todos()
+
+    def registar_por_proprietario(self, funcionario, palavra_passe, utilizador_atual):
+        from src.models.proprietario import Proprietario
+
+        if not isinstance(utilizador_atual, Proprietario):
+            raise ValueError("Apenas proprietários podem registar funcionários.")
+
+        return self.registar(funcionario, palavra_passe)

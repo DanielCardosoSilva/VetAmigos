@@ -12,6 +12,7 @@ class Funcionario:
         self.nome = nome
         self.nome_utilizador = nome_utilizador
         self.palavra_passe_hash = palavra_passe_hash
+        self.tipo = self.__class__.__name__
 
     def __str__(self) -> str:
         return (
