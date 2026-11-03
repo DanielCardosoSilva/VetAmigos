@@ -1,0 +1,16 @@
+# Base de dados SQLite
+db/*.db
+db/*.db-journal
+db/*.db-wal
+db/*.db-shm
+
+# Python
+__pycache__/
+*.pyc
+
+# Ambiente virtual
+.venv/
+venv/
+
+# Ficheiros de testes
+.pytest_cache/
