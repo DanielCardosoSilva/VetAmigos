@@ -80,8 +80,7 @@ class ConsultaRepository:
         if r is None:
             return None
 
-        return Consulta(
-            id=r["id"],
+        consulta = Consulta(
             id_animal=r["id_animal"],
             cedula_profissional=r["cedula_profissional"],
             horario=datetime.fromisoformat(r["horario"]),
@@ -91,6 +90,8 @@ class ConsultaRepository:
             peso_registado=r["peso_registado"],
             estado=r["estado"]
         )
+        consulta.id = r["id"]
+        return consulta
 
     def cancelar(self, id_consulta):
         with get_connection() as conn:
