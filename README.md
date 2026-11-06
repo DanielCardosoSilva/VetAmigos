@@ -1,4 +1,4 @@
-#VetAmigos — Sistema de Gestão Veterinária
+# VetAmigos — Sistema de Gestão Veterinária
 
 O VetAmigos é uma aplicação desenvolvida em Python, destinada à gestão das operações de uma clínica veterinária.
 
@@ -8,7 +8,7 @@ Foi desenvolvido com uma interface de linha de comandos (CLI) e uma arquitetura 
 
 
 
-#Objetivos
+# Objetivos
 
 Digitalizar e simplificar os processos administrativos e clínicos.
 
@@ -21,10 +21,10 @@ Controlar o acesso às funcionalidades através de perfis de funcionários.
 Aplicar boas práticas de programação orientada a objetos, separação de responsabilidades e testes unitários.
 
 
-#Funcionalidades
+# Funcionalidades
 
 
-- Gestão de funcionários
+## Gestão de funcionários
 
 Registo inicial do proprietário da clínica.
 
@@ -49,7 +49,7 @@ Recepcionista: Clientes, animais, agendamentos e faturação
 
 
 
-- Gestão de clientes
+## Gestão de clientes
 
 Registo e listagem de clientes.
 
@@ -63,7 +63,7 @@ Verificação da presença de @ no email.
 
 
 
-- Gestão de animais
+## Gestão de animais
 
 Registo de animais associados aos respetivos clientes.
 
@@ -75,7 +75,7 @@ Atualização do peso após uma consulta clínica.
 
 
 
-- Gestão de consultas
+## Gestão de consultas
 
 Agendamento de consultas para animais registados.
 
@@ -89,23 +89,13 @@ Cancelamento de consultas.
 
 Conclusão de consultas pelo veterinário responsável.
 
-Na conclusão de uma consulta, o médico veterinário pode registar:
-
-Diagnóstico.
-
-Tratamento.
-
-Sumário clínico.
-
-Custo.
-
-Peso observado.
+Na conclusão de uma consulta, o médico veterinário pode registar: Diagnóstico, tratamento, sumário clínico, custo e peso observado.
 
 Quando o peso observado é diferente do peso atual do animal, o sistema atualiza o respetivo registo.
 
 
 
-- Gestão de vacinação
+## Gestão de vacinação
 
 Registo de vacinas administradas.
 
@@ -117,7 +107,7 @@ Consulta de informações de vacinação.
 
 
 
-- Gestão de medicamentos e receitas
+## Gestão de medicamentos e receitas
 
 Registo e consulta de medicamentos.
 
@@ -131,7 +121,7 @@ Registo da quantidade prescrita e da posologia.
 
 
 
-- Faturação e relatórios
+## Faturação e relatórios
 
 Gestão de faturas associadas às consultas.
 
@@ -145,30 +135,36 @@ Consulta de relatórios de gestão.
 
 
 
-#Instalação e execução
+# Instalação e execução
 
-1. Requisitos
+## 1. Requisitos
 
 É necessário ter o Python 3 instalado.
 
-Para confirmar a instalação:
+## Para confirmar a instalação:
 
+```bash
 python --version
+```
 
 
-2. Clonar o repositório
+## 2. Clonar o repositório
 
+```bash
 git clone https://github.com/DanielCardosoSilva/VetAmigos.git
+```
 
+## Entrar na pasta do projeto:
 
-Entrar na pasta do projeto:
-
+```bash
 cd VetAmigos
+```
 
+## 3. Executar a aplicação
 
-3. Executar a aplicação
-
+```bash
 python main.py
+```
 
 
 Na primeira execução, o sistema inicializa a base de dados SQLite e permite criar a conta inicial de proprietário, caso ainda não exista.
@@ -176,33 +172,37 @@ Na primeira execução, o sistema inicializa a base de dados SQLite e permite cr
 Após o registo, é possível iniciar sessão e aceder às funcionalidades disponíveis para o respetivo perfil.
 
 
-#Testes unitários
+# Testes unitários
 
 O projeto utiliza a biblioteca unittest do Python.
 
 Para testar as camadas isoladamente, são utilizados objetos MagicMock, que simulam dependências como repositórios e serviços sem exigir operações reais na base de dados.
 
 
-Na raiz do projeto:
+## Na raiz do projeto:
 
+```bash
 python -m unittest discover -s tests -p "test_*.py" -v
+```
 
 Executar um ficheiro de testes específico
 
 
-Por exemplo:
+## Por exemplo:
 
+```bash
 python -m unittest tests.test_consulta -v
+```
 
 
 Os testes permitem verificar regras de negócio, validações, chamadas entre componentes e o comportamento esperado das operações.
 
 
 
-#Desenvolvimento
+# Desenvolvimento
 
-Projeto: VetAmigos — Sistema de Gestão Veterinária
+## Projeto: VetAmigos — Sistema de Gestão Veterinária
 
-Equipa: Alexandre Petarli, Daniel Silva, David Branco e Regina Silva
+## Equipa: Alexandre Petarli, Daniel Silva, David Branco e Regina Silva
 
-Finalidade: Projeto académico de desenvolvimento de software, com aplicação de programação orientada a objetos, arquitetura MVC, persistência de dados e testes unitários.
+## Finalidade: Projeto académico de desenvolvimento de software, com aplicação de programação orientada a objetos, arquitetura MVC, persistência de dados e testes unitários.
