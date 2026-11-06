@@ -201,8 +201,8 @@ Os testes permitem verificar regras de negócio, validações, chamadas entre co
 
 # Desenvolvimento
 
-## Projeto: VetAmigos — Sistema de Gestão Veterinária
+Projeto: VetAmigos — Sistema de Gestão Veterinária
 
-## Equipa: Alexandre Petarli, Daniel Silva, David Branco e Regina Silva
+Equipa: Alexandre Petarli, Daniel Silva, David Branco e Regina Silva
 
-## Finalidade: Projeto académico de desenvolvimento de software, com aplicação de programação orientada a objetos, arquitetura MVC, persistência de dados e testes unitários.
+Finalidade: Projeto académico de desenvolvimento de software, com aplicação de programação orientada a objetos, arquitetura MVC, persistência de dados e testes unitários.
