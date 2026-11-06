@@ -29,7 +29,7 @@ def abrir(funcionario, controllers):
             controllers["animal"]
         ),
         "Gerir consultas": lambda: consulta_view.abrir(
-            controllers["consulta"]
+            controllers["consulta"], funcionario
         ),
         "Gerir vacinação": lambda: vacina_view.abrir(
             controllers["vacina"]

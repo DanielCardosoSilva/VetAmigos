@@ -24,6 +24,13 @@ class ClienteService:
         if not email or not email.strip():
             raise ValueError("O email é obrigatório.")
 
+        telefone_limpo = telefone.strip()
+        email_limpo = email.strip()
+        if len(telefone_limpo) != 9 or not telefone_limpo.isascii() or not telefone_limpo.isdigit():
+            raise ValueError("O telefone deve conter exatamente 9 dígitos numéricos.")
+        if "@" not in email_limpo:
+            raise ValueError("O email deve conter pelo menos um @.")
+
         # Validação 2: Formato do NIF (RNF13)
         nif_limpo = nif.strip()
         if not self._validar_nif_portugues(nif_limpo):
@@ -34,7 +41,7 @@ class ClienteService:
             raise ValueError("Já existe um cliente registado com este NIF.")
 
         # Criação do objeto e persistência
-        cliente = Cliente(nome=nome.strip(), nif=nif_limpo, telefone=telefone.strip(), email=email.strip())
+        cliente = Cliente(nome=nome.strip(), nif=nif_limpo, telefone=telefone_limpo, email=email_limpo)
         return self._repo.inserir(cliente)
 
     def listar(self) -> list[Cliente]:

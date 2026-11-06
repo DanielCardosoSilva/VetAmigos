@@ -55,3 +55,8 @@ class AnimalRepository:
             return animal
 
         return None
+
+    def atualizar_peso(self, id_animal: int, novo_peso: float) -> bool:
+        with get_connection() as conn:
+            cur = conn.execute("UPDATE animais SET peso_animal = ? WHERE id = ?", (novo_peso, id_animal))
+            return cur.rowcount > 0

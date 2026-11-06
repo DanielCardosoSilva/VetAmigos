@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS consultas (
     custo REAL NOT NULL DEFAULT 0.0,
     peso_registado REAL,
     estado TEXT NOT NULL DEFAULT 'Agendada',
+    motivo TEXT NOT NULL DEFAULT '',
+    sumario TEXT NOT NULL DEFAULT '',
+    data_conclusao TEXT,
     FOREIGN KEY (id_animal) REFERENCES animais(id),
     FOREIGN KEY (cedula_profissional)
         REFERENCES funcionarios(cedula_profissional)

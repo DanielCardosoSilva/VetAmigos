@@ -63,10 +63,79 @@ class TestCliente(unittest.TestCase):
 
         self.repo.inserir.assert_not_called()
 
+    def test_registar_cliente_telefone_curto(self):
+        with self.assertRaisesRegex(ValueError, "9 dígitos"):
+            self.service.registar(
+                "João Silva",
+                "123456789",
+                "91234",
+                "joao@email.com"
+            )
+
+        self.repo.inserir.assert_not_called()
+
+    def test_registar_cliente_telefone_longo(self):
+        with self.assertRaisesRegex(ValueError, "9 dígitos"):
+            self.service.registar(
+                "João Silva",
+                "123456789",
+                "9123456789",
+                "joao@email.com"
+            )
+
+        self.repo.inserir.assert_not_called()
+
+    def test_registar_cliente_telefone_com_letras(self):
+        with self.assertRaises(ValueError):
+            self.service.registar(
+                "João Silva",
+                "123456789",
+                "91234ABCD",
+                "joao@email.com"
+            )
+
+        self.repo.inserir.assert_not_called()
+
+    def test_registar_cliente_email_sem_arroba(self):
+        with self.assertRaisesRegex(ValueError, "@"):
+            self.service.registar(
+                "João Silva",
+                "123456789",
+                "912345678",
+                "joao.email.com"
+            )
+
+        self.repo.inserir.assert_not_called()
+
+    def test_registar_cliente_email_valido(self):
+        self.repo.obter_por_nif.return_value = None
+        self.repo.inserir.side_effect = lambda cliente: cliente
+
+        cliente = self.service.registar(
+            "João Silva",
+            "123456789",
+            "912345678",
+            "joao@email.com"
+        )
+
+        self.assertEqual(cliente.telefone, "912345678")
+        self.assertEqual(cliente.email, "joao@email.com")
+        self.repo.inserir.assert_called_once()
+
     def test_listar_clientes(self):
         clientes = [
-            Cliente("João", "123456789", "912345678", "joao@email.com"),
-            Cliente("Maria", "987654321", "923456789", "maria@email.com")
+            Cliente(
+                "João",
+                "123456789",
+                "912345678",
+                "joao@email.com"
+            ),
+            Cliente(
+                "Maria",
+                "987654321",
+                "923456789",
+                "maria@email.com"
+            )
         ]
 
         self.repo.listar_todos.return_value = clientes

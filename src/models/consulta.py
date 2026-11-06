@@ -13,7 +13,10 @@ class Consulta:
         tratamento="",
         custo=0.0,
         peso_registado=None,
-        estado="Agendada"
+        estado="Agendada",
+        motivo="",
+        sumario="",
+        data_conclusao=None
     ):
         self.id = None
         self.id_animal = id_animal
@@ -24,12 +27,15 @@ class Consulta:
         self.custo = custo
         self.peso_registado = peso_registado
         self.estado = estado
+        self.motivo = motivo
+        self.sumario = sumario
+        self.data_conclusao = data_conclusao
 
     def __str__(self):
         return (
             f"Consulta({self.id}: "
             f"{self.horario.strftime('%Y-%m-%d %H:%M')} - "
-            f"Animal {self.id_animal} [{self.estado}])"
+            f"Animal {self.id_animal} [{self.estado}] - Motivo: {self.motivo})"
         )
 
     @property

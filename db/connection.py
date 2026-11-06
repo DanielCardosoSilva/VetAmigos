@@ -35,3 +35,13 @@ def inicializar_bd():
                 CHECK (ativo IN (0, 1))
                 """
             )
+
+        # Migração incremental, preservando os dados existentes.
+        colunas_consulta = {c["name"] for c in conn.execute("PRAGMA table_info(consultas)")}
+        for nome, definicao in (
+            ("motivo", "TEXT NOT NULL DEFAULT ''"),
+            ("sumario", "TEXT NOT NULL DEFAULT ''"),
+            ("data_conclusao", "TEXT"),
+        ):
+            if nome not in colunas_consulta:
+                conn.execute(f"ALTER TABLE consultas ADD COLUMN {nome} {definicao}")
