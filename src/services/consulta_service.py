@@ -28,6 +28,9 @@ class ConsultaService:
         if self._animal_repo.obter_por_id(id_animal) is None:
             raise ValueError("O animal indicado não existe.")
 
+        if not self._animal_repo.obter_por_id(id_animal).ativo:
+            raise ValueError("Não é possível agendar consultas para animais arquivados.")
+
         if not cedula_profissional.strip():
             raise ValueError("A cédula profissional não pode estar vazia.")
 

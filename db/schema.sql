@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS clientes (
     nome TEXT NOT NULL,
     nif TEXT NOT NULL UNIQUE,
     telefone TEXT NOT NULL,
-    email TEXT NOT NULL
+    email TEXT NOT NULL,
+    ativo INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1))
 );
 
 CREATE TABLE IF NOT EXISTS funcionarios (
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS animais (
     data_nasc TEXT NOT NULL,
     peso_animal REAL NOT NULL,
     nif_cliente TEXT NOT NULL,
+    ativo INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
     FOREIGN KEY (nif_cliente) REFERENCES clientes(nif)
 );
 

@@ -12,6 +12,7 @@ class Cliente:
         self.nif = nif
         self.telefone = telefone
         self.email = email
+        self.ativo = True
 
     def __str__(self) -> str:
         """Devolve uma representação legível em string do objeto Cliente."""
