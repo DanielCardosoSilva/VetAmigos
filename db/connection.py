@@ -45,3 +45,12 @@ def inicializar_bd():
         ):
             if nome not in colunas_consulta:
                 conn.execute(f"ALTER TABLE consultas ADD COLUMN {nome} {definicao}")
+
+        # Migra os estados dos clientes e animais sem perder dados.
+        for tabela in ("clientes", "animais"):
+            colunas = {c["name"] for c in conn.execute(f"PRAGMA table_info({tabela})")}
+            if "ativo" not in colunas:
+                conn.execute(
+                    f"ALTER TABLE {tabela} ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1 "
+                    "CHECK (ativo IN (0, 1))"
+                )
