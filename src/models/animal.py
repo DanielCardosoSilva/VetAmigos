@@ -11,6 +11,7 @@ class Animal:
         self.data_nasc  = data_nasc
         self.peso_animal= peso_animal
         self.nif_cliente= nif_cliente
+        self.ativo      = True
 
     def __str__(self): 
             return (f'Animal({self.id}: {self.nome}, [{self.especie}], {self.data_nasc}, {self.peso_animal}, {self.nif_cliente})') 

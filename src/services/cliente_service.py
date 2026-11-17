@@ -24,6 +24,13 @@ class ClienteService:
         if not email or not email.strip():
             raise ValueError("O email é obrigatório.")
 
+        telefone_limpo = telefone.strip()
+        email_limpo = email.strip()
+        if len(telefone_limpo) != 9 or not telefone_limpo.isascii() or not telefone_limpo.isdigit():
+            raise ValueError("O telefone deve conter exatamente 9 dígitos numéricos.")
+        if "@" not in email_limpo:
+            raise ValueError("O email deve conter pelo menos um @.")
+
         # Validação 2: Formato do NIF (RNF13)
         nif_limpo = nif.strip()
         if not self._validar_nif_portugues(nif_limpo):
@@ -34,9 +41,35 @@ class ClienteService:
             raise ValueError("Já existe um cliente registado com este NIF.")
 
         # Criação do objeto e persistência
-        cliente = Cliente(nome=nome.strip(), nif=nif_limpo, telefone=telefone.strip(), email=email.strip())
+        cliente = Cliente(nome=nome.strip(), nif=nif_limpo, telefone=telefone_limpo, email=email_limpo)
         return self._repo.inserir(cliente)
 
     def listar(self) -> list[Cliente]:
         """Obtém a lista de todos os clientes registados."""
         return self._repo.listar_todos()
+
+    def atualizar(self, nif: str, nome: str, telefone: str, email: str) -> Cliente:
+        """Valida e atualiza os dados de um cliente sem alterar o NIF."""
+        cliente = self._repo.obter_por_nif(nif)
+        if cliente is None:
+            raise ValueError("O cliente não existe.")
+        if not nome or not nome.strip():
+            raise ValueError("O nome do cliente não pode estar vazio.")
+        if not telefone or len(telefone.strip()) != 9 or not telefone.strip().isascii() or not telefone.strip().isdigit():
+            raise ValueError("O telefone deve conter exatamente 9 dígitos numéricos.")
+        if not email or "@" not in email.strip():
+            raise ValueError("O email deve conter pelo menos um @.")
+        cliente.nome = nome.strip()
+        cliente.telefone = telefone.strip()
+        cliente.email = email.strip()
+        self._repo.atualizar(cliente)
+        return cliente
+
+    def definir_ativo(self, nif: str, ativo: bool) -> Cliente:
+        """Arquiva ou reativa um cliente mantendo os registos relacionados."""
+        cliente = self._repo.obter_por_nif(nif)
+        if cliente is None:
+            raise ValueError("O cliente não existe.")
+        self._repo.definir_ativo(nif, ativo)
+        cliente.ativo = ativo
+        return cliente

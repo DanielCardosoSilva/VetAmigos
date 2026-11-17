@@ -8,3 +8,7 @@ class AnimalController:
         return self.repo.listar_todos()
     def consultar(self, identificador):
         return self.repo.obter_por_id(identificador)
+    def atualizar(self, id_animal, nome, especie, nascimento, peso, nif):
+        return self.service.atualizar(id_animal, nome, especie, nascimento, peso, nif)
+    def definir_ativo(self, id_animal, ativo):
+        return self.service.definir_ativo(id_animal, ativo)
