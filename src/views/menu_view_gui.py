@@ -1,146 +1,193 @@
-"""
-Módulo de Menu Principal GUI (Tkinter) VetAmigos.
-"""
+"""Interface gráfica do menu principal do VetAmigos."""
+
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import ttk
+
+from src.models.proprietario import Proprietario
+from src.models.medico_veterinario import MedicoVeterinario
+from src.models.recepcionista import Rececionista
+
+from src.views.cliente_view_gui import ClienteViewGUI
+from src.views.animal_view_gui import AnimalViewGUI
+from src.views import (
+    consulta_view_gui,
+    vacina_view_gui,
+    fatura_view_gui,
+    relatorio_view_gui
+)
+
 
 class MenuViewGUI:
-    """Janela do menu principal adaptada ao perfil do funcionário autenticado."""
-    
+    """Menu principal com permissões baseadas no perfil do funcionário."""
+
     def __init__(self, root, funcionario, controllers, on_logout):
+        # Guardar o utilizador, os controllers e a função de saída.
         self.root = root
         self.funcionario = funcionario
         self.controllers = controllers
         self.on_logout = on_logout
-        
-        self.root.title(f"VetAmigos - Menu Principal ({funcionario.nome})")
-        self.root.geometry("650x520")
+
+        self.root.title("VetAmigos - Menu Principal")
+        self.root.geometry("780x590")
         self.root.resizable(False, False)
-        
+
         self._criar_widgets()
 
-    def _criar_widgets(self):
-        """Cria a interface do menu principal com controlo de acesso visual por perfil."""
-        # Barra superior com informações e botão de Terminar Sessão (T1.5)
-        frame_topo = tk.Frame(self.root, bg="#1976D2", height=60)
-        frame_topo.pack(fill="x", side="top")
-        
-        lbl_info = tk.Label(
-            frame_topo, text=f"Utilizador: {getattr(self.funcionario, 'nome', 'Funcionário')}", 
-            bg="#1976D2", fg="white", font=("Arial", 11, "bold")
-        )
-        lbl_info.pack(side="left", padx=20, pady=15)
-        
-        # Botão Terminar Sessão (T1.5)
-        btn_logout = tk.Button(
-            frame_topo, text="Terminar Sessão", bg="#D32F2F", fg="white", 
-            font=("Arial", 10, "bold"), command=self.terminar_sessao
-        )
-        btn_logout.pack(side="right", padx=20, pady=12)
-        
-        # Frame central para os módulos (T1.3)
-        frame_centro = tk.LabelFrame(
-            self.root, text=" Módulos Disponíveis ", font=("Arial", 12, "bold"), padx=20, pady=20
-        )
-        frame_centro.pack(padx=20, pady=20, fill="both", expand=True)
-        
-        # Obter permissões baseadas no perfil do utilizador logado
-        permissoes = self._obter_permissoes_por_perfil()
-        
-        # Lista de módulos do sistema: (Texto do Botão, Função de Abertura, Chave de Permissão)
-        modulos = [
-            ("Gerir Clientes", self.abrir_clientes, "cliente"),
-            ("Gerir Animais", self.abrir_animais, "animal"),
-            ("Gerir Consultas", self.abrir_consultas, "consulta"),
-            ("Gerir Vacinação", self.abrir_vacinacao, "vacina"),
-            ("Gerir Medicamentos", self.abrir_medicamentos, "medicamento"),
-            ("Gerir Receitas", self.abrir_receitas, "receita"),
-            ("Gerir Faturas", self.abrir_faturas, "fatura"),
-            ("Consultar Relatórios", self.abrir_relatorios, "relatorio"),
-            ("Gerir Funcionários", self.abrir_funcionarios, "funcionario")
-        ]
-        
-        # Posicionar botões em grelha (Grid) com controlo de acesso visual (T1.4)
-        row, col = 0, 0
-        for texto, comando, chave in modulos:
-            permitido = permissoes.get(chave, False)
-            
-            # Controlo de acesso visual (T1.4): desativar botões não permitidos (state=DISABLED)
-            estado = "normal" if permitido else "disabled"
-            cor_bg = "#4CAF50" if permitido else "#E0E0E0"
-            cor_fg = "white" if permitido else "#9E9E9E"
-            
-            btn = tk.Button(
-                frame_centro, text=texto, command=comando, 
-                font=("Arial", 10, "bold"), width=20, height=2,
-                bg=cor_bg, fg=cor_fg, state=estado
-            )
-            btn.grid(row=row, column=col, padx=12, pady=12)
-            
-            col += 1
-            if col > 2:
-                col = 0
-                row += 1
-
     def _obter_permissoes_por_perfil(self):
-        """Define quais módulos estão ativos para o perfil atual com base na matriz de regras do projeto."""
-        tipo_func = type(self.funcionario).__name__
-        
-        if "Rececionista" in tipo_func:
+        # Aplicar as mesmas permissões de acesso da versão CLI.
+        if isinstance(self.funcionario, Proprietario):
             return {
-                "cliente": True, "animal": True, "consulta": True, 
-                "vacina": False, "medicamento": False, "receita": False, 
-                "fatura": True, "relatorio": False, "funcionario": False
+                "cliente", "animal", "consulta", "vacina",
+                "medicamento", "receita", "fatura",
+                "relatorio", "funcionario"
             }
-        elif "MedicoVeterinario" in tipo_func:
+
+        if isinstance(self.funcionario, MedicoVeterinario):
             return {
-                "cliente": False, "animal": True, "consulta": True, 
-                "vacina": True, "medicamento": True, "receita": True, 
-                "fatura": False, "relatorio": False, "funcionario": False
+                "consulta", "vacina", "medicamento", "receita"
             }
-        elif "Proprietario" in tipo_func:
+
+        if isinstance(self.funcionario, Rececionista):
             return {
-                "cliente": False, "animal": True, "consulta": True, 
-                "vacina": True, "medicamento": False, "receita": True, 
-                "fatura": True, "relatorio": True, "funcionario": False
+                "cliente", "animal", "consulta", "fatura"
             }
-        else:
-            # Administrador / Acesso Total por predefinição
-            return {
-                "cliente": True, "animal": True, "consulta": True, 
-                "vacina": True, "medicamento": True, "receita": True, 
-                "fatura": True, "relatorio": True, "funcionario": True
-            }
+
+        return set()
+
+    def _criar_widgets(self):
+        # Construir a identificação do funcionário e o menu de módulos.
+        topo = ttk.Frame(self.root, padding=15)
+        topo.pack(fill="x")
+
+        ttk.Label(
+            topo,
+            text="VetAmigos",
+            font=("Arial", 18, "bold")
+        ).pack(side="left")
+
+        ttk.Button(
+            topo,
+            text="Terminar Sessão",
+            command=self.terminar_sessao
+        ).pack(side="right")
+
+        ttk.Label(
+            self.root,
+            text=(
+                f"Utilizador: {self.funcionario.nome} | "
+                f"Perfil: {self.funcionario.tipo}"
+            ),
+            font=("Arial", 11)
+        ).pack(anchor="w", padx=20, pady=(0, 12))
+
+        quadro = ttk.LabelFrame(
+            self.root,
+            text="Módulos disponíveis",
+            padding=20
+        )
+        quadro.pack(fill="both", expand=True, padx=20, pady=10)
+
+        for coluna in range(3):
+            quadro.columnconfigure(coluna, weight=1)
+
+        modulos = [
+            ("Gerir Clientes", "cliente", self.abrir_clientes),
+            ("Gerir Animais", "animal", self.abrir_animais),
+            ("Gerir Consultas", "consulta", self.abrir_consultas),
+            ("Gerir Vacinação", "vacina", self.abrir_vacinacao),
+            ("Gerir Medicamentos", "medicamento", None),
+            ("Gerir Receitas", "receita", None),
+            ("Gerir Faturas", "fatura", self.abrir_faturas),
+            ("Consultar Relatórios", "relatorio", self.abrir_relatorios),
+            ("Gerir Funcionários", "funcionario", None)
+        ]
+
+        permissoes = self._obter_permissoes_por_perfil()
+
+        for indice, (texto, chave, comando) in enumerate(modulos):
+            # Ativar apenas os módulos permitidos e com interface GUI.
+            permitido = chave in permissoes and comando is not None
+
+            ttk.Button(
+                quadro,
+                text=texto,
+                command=comando,
+                state="normal" if permitido else "disabled",
+                width=23
+            ).grid(
+                row=indice // 3,
+                column=indice % 3,
+                padx=8,
+                pady=15,
+                ipadx=5,
+                ipady=12,
+                sticky="ew"
+            )
+
+        ttk.Label(
+            quadro,
+            text=(
+                "Os módulos sem interface gráfica própria "
+                "permanecem temporariamente indisponíveis."
+            ),
+            wraplength=650,
+            foreground="gray"
+        ).grid(
+            row=3,
+            column=0,
+            columnspan=3,
+            pady=(25, 0)
+        )
 
     def terminar_sessao(self):
-        """Fecha a janela do menu principal e reabre a janela de login (T1.5)."""
-        if messagebox.askyesno("Terminar Sessão", "Tem certeza que deseja terminar a sessão?"):
-            self.root.destroy()
-            self.on_logout()
+        # Voltar ao login sem destruir a janela principal.
+        self.on_logout()
 
     def abrir_clientes(self):
-        messagebox.showinfo("Navegação", "A abrir Módulo de Clientes (Daniel)")
+        # Abrir a interface de clientes com o respetivo controller.
+        ClienteViewGUI(
+            self.root,
+            self.controllers["cliente"]
+        )
 
     def abrir_animais(self):
-        messagebox.showinfo("Navegação", "A abrir Módulo de Animais (Daniel)")
+        # Abrir a interface de animais com os dois controllers necessários.
+        AnimalViewGUI(
+            self.root,
+            self.controllers["animal"],
+            self.controllers["cliente"]
+        )
 
     def abrir_consultas(self):
-        messagebox.showinfo("Navegação", "A abrir Módulo de Consultas (David)")
+        # Abrir a gestão de consultas com o funcionário autenticado.
+        consulta_view_gui.abrir(
+            self.controllers["consulta"],
+            self.controllers["animal"],
+            funcionario=self.funcionario,
+            pai=self.root
+        )
 
     def abrir_vacinacao(self):
-        messagebox.showinfo("Navegação", "A abrir Módulo de Vacinação (David)")
-
-    def abrir_medicamentos(self):
-        messagebox.showinfo("Navegação", "A abrir Módulo de Medicamentos")
-
-    def abrir_receitas(self):
-        messagebox.showinfo("Navegação", "A abrir Módulo de Receitas")
+        # Abrir a gestão de vacinação com seleção de animais.
+        vacina_view_gui.abrir(
+            self.controllers["vacina"],
+            self.controllers["animal"],
+            pai=self.root
+        )
 
     def abrir_faturas(self):
-        messagebox.showinfo("Navegação", "A abrir Módulo de Faturas (Regina)")
+        # Abrir a faturação com todos os controllers necessários.
+        fatura_view_gui.abrir(
+            self.controllers["fatura"],
+            self.controllers["consulta"],
+            self.controllers["animal"],
+            self.controllers["cliente"],
+            pai=self.root
+        )
 
     def abrir_relatorios(self):
-        messagebox.showinfo("Navegação", "A abrir Painel de Relatórios (Regina)")
-
-    def abrir_funcionarios(self):
-        messagebox.showinfo("Navegação", "A abrir Gestão de Funcionários")
+        # Abrir os relatórios utilizando o respetivo controller.
+        relatorio_view_gui.abrir(
+            self.controllers["relatorio"],
+            pai=self.root
+        )
