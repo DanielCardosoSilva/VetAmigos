@@ -14,15 +14,11 @@ class FuncionarioRepository:
             cur = conn.execute(
                 """
                 INSERT INTO funcionarios (
-                    nome,
-                    nome_utilizador,
-                    palavra_passe_hash,
-                    tipo,
-                    cedula_profissional,
-                    ativo
+                    nome, nome_utilizador, palavra_passe_hash,
+                    tipo, cedula_profissional, ativo
                 )
                 VALUES (?, ?, ?, ?, ?, ?)
-                """
+                """,
                 (
                     funcionario.nome,
                     funcionario.nome_utilizador,
