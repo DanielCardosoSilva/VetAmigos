@@ -22,7 +22,7 @@ class FuncionarioRepository:
                     ativo
                 )
                 VALUES (?, ?, ?, ?, ?, ?)
-                """,
+                """
                 (
                     funcionario.nome,
                     funcionario.nome_utilizador,
@@ -65,6 +65,35 @@ class FuncionarioRepository:
         if row:
             return self._converter_funcionario(row)
 
+        return None
+
+    def guardar_mfa_secret(self, nome_utilizador: str, mfa_secret: str) -> bool:
+        """Guarda o segredo TOTP (MFA) associado ao funcionário."""
+        with get_connection() as conn:
+            cur = conn.execute(
+                """
+                UPDATE funcionarios
+                SET mfa_secret = ?
+                WHERE nome_utilizador = ?
+                """,
+                (mfa_secret, nome_utilizador)
+            )
+            return cur.rowcount > 0
+
+    def obter_mfa_secret(self, nome_utilizador: str):
+        """Obtém o segredo TOTP (MFA) do funcionário ou None se não existir."""
+        with get_connection() as conn:
+            row = conn.execute(
+                """
+                SELECT mfa_secret
+                FROM funcionarios
+                WHERE nome_utilizador = ?
+                """,
+                (nome_utilizador,)
+            ).fetchone()
+
+        if row:
+            return row["mfa_secret"]
         return None
 
     def listar_todos(self):
@@ -137,5 +166,7 @@ class FuncionarioRepository:
 
         funcionario.id = row["id"]
         funcionario.ativo = bool(row["ativo"])
+        colunas = row.keys()
+        funcionario.mfa_secret = row["mfa_secret"] if "mfa_secret" in colunas else None
 
         return funcionario

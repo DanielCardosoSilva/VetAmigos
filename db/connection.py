@@ -7,6 +7,7 @@ DB_PATH = Path(__file__).parent / "vetamigos.db"
 
 
 def get_connection():
+    """Cria e devolve uma ligação SQLite com chaves estrangeiras ativas."""
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
@@ -14,6 +15,7 @@ def get_connection():
 
 
 def inicializar_bd():
+    """Inicializa o esquema da base de dados e aplica migrações incrementais."""
     schema = Path(__file__).parent / "schema.sql"
 
     with get_connection() as conn:
@@ -33,6 +35,14 @@ def inicializar_bd():
                 ALTER TABLE funcionarios
                 ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1
                 CHECK (ativo IN (0, 1))
+                """
+            )
+
+        if "mfa_secret" not in nomes_colunas:
+            conn.execute(
+                """
+                ALTER TABLE funcionarios
+                ADD COLUMN mfa_secret TEXT
                 """
             )
 

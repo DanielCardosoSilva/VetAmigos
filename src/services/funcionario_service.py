@@ -1,7 +1,7 @@
 """src/services/funcionario_service.py"""
 
-import hashlib
-import secrets
+import bcrypt
+import pyotp
 
 from src.models.funcionario import Funcionario
 from src.models.proprietario import Proprietario
@@ -9,42 +9,40 @@ from src.repositories.funcionario_repository import FuncionarioRepository
 
 
 class FuncionarioService:
+    """Serviço de gestão de funcionários, autenticação bcrypt e MFA (TOTP)."""
 
     def __init__(self, repo: FuncionarioRepository):
+        """Inicializa o serviço com o repositório de funcionários."""
         self._repo = repo
 
     def _gerar_hash(self, palavra_passe: str) -> str:
-        salt = secrets.token_hex(16)
-
-        hash_passe = hashlib.pbkdf2_hmac(
-            "sha256",
-            palavra_passe.encode(),
-            salt.encode(),
-            600000
-        ).hex()
-
-        return f"{salt}${hash_passe}"
+        """Gera hash seguro da palavra-passe com bcrypt (rounds=12)."""
+        salt = bcrypt.gensalt(rounds=12)
+        hashed = bcrypt.hashpw(palavra_passe.encode("utf-8"), salt)
+        return hashed.decode("utf-8")
 
     def _validar_palavra_passe(
         self,
         palavra_passe: str,
         hash_guardado: str
     ) -> bool:
-        salt, hash_original = hash_guardado.split("$")
+        """Valida a palavra-passe em tempo constante usando bcrypt.checkpw()."""
+        if not hash_guardado:
+            return False
 
-        hash_passe = hashlib.pbkdf2_hmac(
-            "sha256",
-            palavra_passe.encode(),
-            salt.encode(),
-            600000
-        ).hex()
-
-        return secrets.compare_digest(
-            hash_passe,
-            hash_original
+        hash_bytes = (
+            hash_guardado.encode("utf-8")
+            if isinstance(hash_guardado, str)
+            else hash_guardado
         )
 
+        try:
+            return bcrypt.checkpw(palavra_passe.encode("utf-8"), hash_bytes)
+        except ValueError:
+            return False
+
     def _validar_proprietario(self, utilizador_atual):
+        """Garante que a operação é executada por um proprietário ativo."""
         if not isinstance(utilizador_atual, Proprietario):
             raise ValueError(
                 "Apenas proprietários podem gerir funcionários."
@@ -71,6 +69,7 @@ class FuncionarioService:
         funcionario: Funcionario,
         palavra_passe: str
     ):
+        """Regista um novo funcionário com palavra-passe hasheada via bcrypt."""
         if not funcionario.nome or not funcionario.nome.strip():
             raise ValueError("O nome é obrigatório.")
 
@@ -115,11 +114,17 @@ class FuncionarioService:
         nome_utilizador: str,
         palavra_passe: str
     ):
+        """Autentica um funcionário verificando estado ativo e hash bcrypt."""
         funcionario = self._repo.obter_por_nome_utilizador(
             nome_utilizador.strip()
         )
 
         if funcionario is None:
+            # Executa verificação fictícia para mitigar enumeração de utilizadores
+            bcrypt.checkpw(
+                b"dummy",
+                bcrypt.hashpw(b"dummy", bcrypt.gensalt(4))
+            )
             raise ValueError(
                 "Nome de utilizador ou palavra-passe incorretos."
             )
@@ -140,7 +145,49 @@ class FuncionarioService:
 
         return funcionario
 
+    def configurar_mfa(self, nome_utilizador: str) -> dict:
+        """Gera e guarda o segredo TOTP para contas de Proprietário (Lab 3)."""
+        utilizador_limpo = (nome_utilizador or "").strip()
+        funcionario = self._repo.obter_por_nome_utilizador(utilizador_limpo)
+
+        if funcionario is None:
+            raise ValueError("Funcionário não encontrado.")
+
+        if not isinstance(funcionario, Proprietario):
+            raise ValueError(
+                "A configuração MFA TOTP destina-se a contas de Proprietário."
+            )
+
+        segredo = pyotp.random_base32()
+        self._repo.guardar_mfa_secret(utilizador_limpo, segredo)
+
+        uri = pyotp.TOTP(segredo).provisioning_uri(
+            name=utilizador_limpo,
+            issuer_name="VetAmigos"
+        )
+
+        return {
+            "secret": segredo,
+            "uri": uri
+        }
+
+    def verificar_mfa(self, nome_utilizador: str, codigo: str) -> bool:
+        """Valida o código TOTP (6 dígitos) do utilizador indicado (Lab 3)."""
+        utilizador_limpo = (nome_utilizador or "").strip()
+        segredo = self._repo.obter_mfa_secret(utilizador_limpo)
+
+        # Se ainda não houver segredo configurado, permite prosseguir
+        if not segredo:
+            return True
+
+        codigo_limpo = (codigo or "").strip()
+        if not codigo_limpo:
+            return False
+
+        return pyotp.TOTP(segredo).verify(codigo_limpo, valid_window=1)
+
     def listar_todos(self):
+        """Lista todos os funcionários registados."""
         return self._repo.listar_todos()
 
     def registar_por_proprietario(
@@ -149,6 +196,7 @@ class FuncionarioService:
         palavra_passe,
         utilizador_atual
     ):
+        """Regista um funcionário exigindo permissão de proprietário."""
         self._validar_proprietario(utilizador_atual)
 
         return self.registar(
@@ -157,6 +205,7 @@ class FuncionarioService:
         )
 
     def listar_por_proprietario(self, utilizador_atual):
+        """Lista todos os funcionários exigindo permissão de proprietário."""
         self._validar_proprietario(utilizador_atual)
 
         return self._repo.listar_todos()
@@ -166,6 +215,7 @@ class FuncionarioService:
         id_funcionario,
         utilizador_atual
     ):
+        """Desativa um funcionário aplicando regras de segurança e integridade."""
         self._validar_proprietario(utilizador_atual)
 
         funcionario = self._repo.obter_por_id(
@@ -209,6 +259,7 @@ class FuncionarioService:
         id_funcionario,
         utilizador_atual
     ):
+        """Reativa um funcionário previamente desativado."""
         self._validar_proprietario(utilizador_atual)
 
         funcionario = self._repo.obter_por_id(
