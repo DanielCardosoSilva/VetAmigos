@@ -1,63 +1,82 @@
-"""Controlo de acesso baseado em papéis (RBAC) do VetAmigos."""
+"""Controlo de acesso baseado em papéis"""
 
 from functools import wraps
+
 import jwt
+
+from src.repositories.funcionario_repository import FuncionarioRepository
+from src.services.session import validar_token
 
 
 PERMISSOES = {
     "cliente": ("Proprietario", "Rececionista"),
     "animal": ("Proprietario", "Rececionista"),
-    "consulta": ("Proprietario", "MedicoVeterinario", "Rececionista"),
+    "consulta": (
+        "Proprietario", "MedicoVeterinario", "Rececionista"
+    ),
     "vacina": ("Proprietario", "MedicoVeterinario"),
     "medicamento": ("Proprietario", "MedicoVeterinario"),
     "receita": ("Proprietario", "MedicoVeterinario"),
     "fatura": ("Proprietario", "Rececionista"),
     "relatorio": ("Proprietario",),
-    "funcionario": ("Proprietario",),
+    "funcionario": ("Proprietario",)
 }
 
 
-def require_tipo(*tipos_permitidos):
-    """Restringe a execução de uma função aos papéis autorizados."""
+def autorizar_tipo(token, *tipos_permitidos):
+    """Valida a sessão, o funcionário ativo e as permissões."""
+    if not token:
+        raise PermissionError(
+            "Não autenticado. Inicie sessão."
+        )
 
-    # Validar a configuração do decorador antes da utilização.
+    try:
+        dados = validar_token(token)
+    except jwt.ExpiredSignatureError as erro:
+        raise PermissionError(
+            "Sessão expirada. Inicie sessão novamente."
+        ) from erro
+    except jwt.InvalidTokenError as erro:
+        raise PermissionError(
+            "Sessão inválida. Inicie sessão novamente."
+        ) from erro
+
+    funcionario = FuncionarioRepository().obter_por_nome_utilizador(
+        dados["sub"]
+    )
+
+    if funcionario is None or not funcionario.ativo:
+        raise PermissionError("Conta inexistente ou desativada.")
+
+    if funcionario.tipo != dados["tipo"]:
+        raise PermissionError("O perfil da sessão não é válido.")
+
+    if funcionario.tipo not in tipos_permitidos:
+        raise PermissionError(
+            "Acesso negado. Não tem permissões para esta operação."
+        )
+
+    return dados
+
+
+def autorizar_modulo(token, modulo):
+    """Autoriza o acesso a um módulo segundo a matriz RBAC."""
+    if modulo not in PERMISSOES:
+        raise PermissionError("Módulo não autorizado.")
+
+    return autorizar_tipo(token, *PERMISSOES[modulo])
+
+
+def require_tipo(*tipos_permitidos):
+    """Cria um decorador para proteger funções com JWT."""
     if not tipos_permitidos:
-        raise ValueError("É necessário indicar pelo menos um papel permitido.")
+        raise ValueError("Indique pelo menos um perfil.")
 
     def decorator(funcao):
         # Preservar os metadados da função protegida.
         @wraps(funcao)
         def wrapper(token, *args, **kwargs):
-            # Validar o JWT usando o módulo de sessões do David.
-            from src.services.session import validar_token
-
-            if not isinstance(token, str) or not token.strip():
-                raise PermissionError(
-                    "Não autenticado. É necessário iniciar sessão."
-                )
-
-            try:
-                payload = validar_token(token)
-            except jwt.ExpiredSignatureError as erro:
-                raise PermissionError(
-                    "Sessão expirada. Inicie sessão novamente."
-                ) from erro
-            except jwt.InvalidTokenError as erro:
-                raise PermissionError(
-                    "Sessão inválida. Inicie sessão novamente."
-                ) from erro
-
-            if not isinstance(payload, dict):
-                raise PermissionError("Sessão inválida.")
-
-            tipo = payload.get("tipo")
-
-            if tipo not in tipos_permitidos:
-                raise PermissionError(
-                    "Acesso negado. Não tem permissões "
-                    "para executar esta operação."
-                )
-
+            autorizar_tipo(token, *tipos_permitidos)
             return funcao(token, *args, **kwargs)
 
         return wrapper
@@ -66,10 +85,8 @@ def require_tipo(*tipos_permitidos):
 
 
 def require_modulo(modulo):
-    """Protege uma operação segundo as permissões do módulo."""
-
-    # Consultar a matriz de permissões da aplicação.
+    """Cria um decorador com as permissões de um módulo."""
     if modulo not in PERMISSOES:
-        raise ValueError(f"Módulo desconhecido: {modulo}")
+        raise ValueError("Módulo desconhecido.")
 
     return require_tipo(*PERMISSOES[modulo])

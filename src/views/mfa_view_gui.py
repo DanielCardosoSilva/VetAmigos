@@ -1,40 +1,53 @@
-"""src/views/mfa_view_gui.py - Janela MFA (TOTP) com Tkinter para Proprietário."""
+"""Janela gráfica de verificação multifator TOTP."""
 
 import tkinter as tk
 from tkinter import ttk, messagebox
 
 
 class MfaViewGUI:
-    """Ecrã para configuração inicial (se necessário) e validação TOTP de 6 dígitos."""
+    """Configura e valida o MFA para contas de Proprietário."""
 
-    def __init__(self, root, funcionario, auth_controller, on_mfa_success, on_mfa_cancel):
-        """Inicializa o ecrã MFA para o proprietário autenticado."""
+    def __init__(
+        self,
+        root,
+        funcionario,
+        auth_controller,
+        on_mfa_success,
+        on_mfa_cancel
+    ):
+        """Inicializa o formulário de verificação multifator."""
         self.root = root
         self.funcionario = funcionario
         self.auth_controller = auth_controller
         self.on_mfa_success = on_mfa_success
         self.on_mfa_cancel = on_mfa_cancel
 
-        self.root.title("VetAmigos - Autenticação MFA")
-        self.root.geometry("460x360")
-        self.root.resizable(False, False)
-
-        self.codigo_var = tk.StringVar(master=self.root)
+        self.codigo_var = tk.StringVar(master=root)
         self.dados_mfa = None
 
-        if not getattr(self.funcionario, "mfa_secret", None):
-            self.dados_mfa = self.auth_controller.configurar_mfa(
-                self.funcionario.nome_utilizador
-            )
-            self.funcionario.mfa_secret = self.dados_mfa["secret"]
+        self.root.title("VetAmigos - Autenticação MFA")
+        self.root.geometry("520x420")
+        self.root.resizable(False, False)
+
+        if not getattr(funcionario, "mfa_secret", None):
+            try:
+                self.dados_mfa = auth_controller.configurar_mfa(
+                    funcionario.nome_utilizador
+                )
+            except Exception as erro:
+                messagebox.showerror(
+                    "Erro de MFA", str(erro), parent=root
+                )
+                self.root.after_idle(self.on_mfa_cancel)
+                return
 
         self._criar_widgets()
 
     def _criar_widgets(self):
-        """Cria e posiciona os widgets de configuração e validação MFA."""
+        """Cria os campos de configuração e verificação do MFA."""
         quadro = ttk.LabelFrame(
             self.root,
-            text=" Verificação Multifator (MFA - TOTP) ",
+            text="Autenticação Multifator (TOTP)",
             padding=15
         )
         quadro.pack(fill="both", expand=True, padx=18, pady=18)
@@ -42,82 +55,109 @@ class MfaViewGUI:
         ttk.Label(
             quadro,
             text=f"Proprietário: {self.funcionario.nome}",
-            font=("Arial", 10, "bold")
-        ).pack(anchor="w", pady=(0, 8))
+            font=("Arial", 11, "bold")
+        ).pack(anchor="w", pady=(0, 12))
 
         if self.dados_mfa:
             ttk.Label(
                 quadro,
-                text="MFA configurado pela primeira vez. Registe o segredo na app autenticadora:",
-                wraplength=400,
-                font=("Arial", 9)
-            ).pack(anchor="w", pady=(0, 4))
+                text=(
+                    "Primeira configuração: introduza este segredo "
+                    "na aplicação autenticadora e confirme o código."
+                ),
+                wraplength=460
+            ).pack(anchor="w", pady=(0, 8))
 
-            txt_info = tk.Text(quadro, height=4, width=48, font=("Consolas", 9))
-            txt_info.insert(
-                "1.0",
-                f"Segredo: {self.dados_mfa['secret']}\nURI: {self.dados_mfa['uri']}"
+            informacao = tk.Text(
+                quadro, height=5, width=55, wrap="word"
             )
-            txt_info.configure(state="disabled")
-            txt_info.pack(fill="x", pady=(0, 10))
+            informacao.insert(
+                "1.0",
+                f"Segredo:\n{self.dados_mfa['secret']}\n\n"
+                f"URI:\n{self.dados_mfa['uri']}"
+            )
+            informacao.config(state="disabled")
+            informacao.pack(fill="x", pady=(0, 12))
+        else:
+            ttk.Label(
+                quadro,
+                text="Introduza o código da sua aplicação autenticadora."
+            ).pack(anchor="w", pady=(0, 12))
 
         ttk.Label(
             quadro,
-            text="Código de 6 dígitos:",
-            font=("Arial", 10)
-        ).pack(anchor="w", pady=(2, 2))
+            text="Código de 6 dígitos:"
+        ).pack(anchor="w", pady=(0, 4))
 
-        entry_codigo = ttk.Entry(
+        entrada = ttk.Entry(
             quadro,
             textvariable=self.codigo_var,
-            font=("Arial", 12),
-            width=16
+            width=18,
+            font=("Arial", 13)
         )
-        entry_codigo.pack(anchor="w", pady=(0, 14))
-        entry_codigo.focus()
-        entry_codigo.bind("<Return>", lambda _event: self._validar_codigo())
+        entrada.pack(anchor="w", pady=(0, 16))
+        entrada.focus_set()
+        entrada.bind(
+            "<Return>",
+            lambda evento: self._validar_codigo()
+        )
 
-        frame_botoes = ttk.Frame(quadro)
-        frame_botoes.pack(fill="x", pady=(4, 0))
+        botoes = ttk.Frame(quadro)
+        botoes.pack(fill="x", pady=8)
 
         ttk.Button(
-            frame_botoes,
+            botoes,
             text="Validar Código",
             command=self._validar_codigo
-        ).pack(side="left", padx=(0, 8))
+        ).pack(side="left", padx=(0, 10))
 
         ttk.Button(
-            frame_botoes,
+            botoes,
             text="Cancelar",
             command=self._cancelar
         ).pack(side="left")
 
     def _validar_codigo(self):
-        """Valida o código TOTP introduzido e avança para o menu se for válido."""
+        """Confirma o TOTP antes de permitir o acesso ao menu."""
         codigo = self.codigo_var.get().strip()
-        if not codigo:
+
+        if (
+            len(codigo) != 6
+            or not codigo.isascii()
+            or not codigo.isdecimal()
+        ):
             messagebox.showwarning(
-                "Código em falta",
-                "Introduza o código MFA de 6 dígitos.",
+                "Código inválido",
+                "Introduza exatamente 6 dígitos.",
                 parent=self.root
             )
             return
 
-        valido = self.auth_controller.verificar_mfa(
-            self.funcionario.nome_utilizador,
-            codigo
-        )
+        try:
+            valido = self.auth_controller.verificar_mfa(
+                self.funcionario.nome_utilizador,
+                codigo
+            )
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro de MFA",
+                str(erro),
+                parent=self.root
+            )
+            return
 
         if valido:
             self.on_mfa_success(self.funcionario)
-        else:
-            messagebox.showerror(
-                "MFA Inválido",
-                "Código MFA incorreto ou expirado.",
-                parent=self.root
-            )
-            self.codigo_var.set("")
+            return
+
+        self.codigo_var.set("")
+
+        messagebox.showerror(
+            "MFA inválido",
+            "O código está incorreto, expirou ou já foi utilizado.",
+            parent=self.root
+        )
 
     def _cancelar(self):
-        """Cancela a verificação MFA e regressa ao ecrã de login."""
+        """Cancela a autenticação e regressa ao login."""
         self.on_mfa_cancel()

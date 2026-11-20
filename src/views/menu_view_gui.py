@@ -1,12 +1,9 @@
-"""Interface gráfica do menu principal do VetAmigos."""
+"""Menu principal gráfico do VetAmigos com controlo RBAC."""
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 
-from src.models.proprietario import Proprietario
-from src.models.medico_veterinario import MedicoVeterinario
-from src.models.recepcionista import Rececionista
-
+from src.rbac import PERMISSOES, autorizar_modulo
 from src.views.cliente_view_gui import ClienteViewGUI
 from src.views.animal_view_gui import AnimalViewGUI
 from src.views import (
@@ -18,13 +15,16 @@ from src.views import (
 
 
 class MenuViewGUI:
-    """Menu principal com permissões baseadas no perfil do funcionário."""
+    """Apresenta os módulos autorizados ao funcionário autenticado."""
 
-    def __init__(self, root, funcionario, controllers, on_logout):
-        # Guardar o utilizador, os controllers e a função de saída.
+    def __init__(
+        self, root, funcionario, controllers, token, on_logout
+    ):
+        """Guarda a sessão e apresenta o menu correspondente ao perfil."""
         self.root = root
         self.funcionario = funcionario
         self.controllers = controllers
+        self.token = token
         self.on_logout = on_logout
 
         self.root.title("VetAmigos - Menu Principal")
@@ -33,29 +33,35 @@ class MenuViewGUI:
 
         self._criar_widgets()
 
-    def _obter_permissoes_por_perfil(self):
-        # Aplicar as mesmas permissões de acesso da versão CLI.
-        if isinstance(self.funcionario, Proprietario):
-            return {
-                "cliente", "animal", "consulta", "vacina",
-                "medicamento", "receita", "fatura",
-                "relatorio", "funcionario"
-            }
+    def _executar(self, modulo, operacao):
+        """Verifica o JWT e o RBAC antes de abrir um módulo."""
+        try:
+            autorizar_modulo(self.token, modulo)
+            operacao()
+        except PermissionError as erro:
+            messagebox.showerror(
+                "Acesso negado",
+                str(erro),
+                parent=self.root
+            )
 
-        if isinstance(self.funcionario, MedicoVeterinario):
-            return {
-                "consulta", "vacina", "medicamento", "receita"
-            }
-
-        if isinstance(self.funcionario, Rececionista):
-            return {
-                "cliente", "animal", "consulta", "fatura"
-            }
-
-        return set()
+            if (
+                "Sessão" in str(erro)
+                or "sessão" in str(erro)
+                or "Não autenticado" in str(erro)
+                or "Conta inexistente" in str(erro)
+                or "Conta desativada" in str(erro)
+            ):
+                self.terminar_sessao()
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro ao abrir módulo",
+                str(erro),
+                parent=self.root
+            )
 
     def _criar_widgets(self):
-        # Construir a identificação do funcionário e o menu de módulos.
+        """Cria os botões e aplica as permissões do perfil autenticado."""
         topo = ttk.Frame(self.root, padding=15)
         topo.pack(fill="x")
 
@@ -85,7 +91,9 @@ class MenuViewGUI:
             text="Módulos disponíveis",
             padding=20
         )
-        quadro.pack(fill="both", expand=True, padx=20, pady=10)
+        quadro.pack(
+            fill="both", expand=True, padx=20, pady=10
+        )
 
         for coluna in range(3):
             quadro.columnconfigure(coluna, weight=1)
@@ -102,18 +110,22 @@ class MenuViewGUI:
             ("Gerir Funcionários", "funcionario", None)
         ]
 
-        permissoes = self._obter_permissoes_por_perfil()
-
-        for indice, (texto, chave, comando) in enumerate(modulos):
-            # Ativar apenas os módulos permitidos e com interface GUI.
-            permitido = chave in permissoes and comando is not None
+        for indice, (titulo, modulo, operacao) in enumerate(modulos):
+            # Ativar apenas funcionalidades implementadas e permitidas.
+            permitido = (
+                self.funcionario.tipo in PERMISSOES[modulo]
+                and operacao is not None
+            )
 
             ttk.Button(
                 quadro,
-                text=texto,
-                command=comando,
+                text=titulo,
+                width=23,
                 state="normal" if permitido else "disabled",
-                width=23
+                command=(
+                    lambda m=modulo, f=operacao:
+                    self._executar(m, f)
+                ) if permitido else None
             ).grid(
                 row=indice // 3,
                 column=indice % 3,
@@ -133,25 +145,23 @@ class MenuViewGUI:
             wraplength=650,
             foreground="gray"
         ).grid(
-            row=3,
-            column=0,
-            columnspan=3,
+            row=3, column=0, columnspan=3,
             pady=(25, 0)
         )
 
     def terminar_sessao(self):
-        # Voltar ao login sem destruir a janela principal.
+        """Termina a sessão e regressa ao login."""
         self.on_logout()
 
     def abrir_clientes(self):
-        # Abrir a interface de clientes com o respetivo controller.
+        """Abre a gestão de clientes."""
         ClienteViewGUI(
             self.root,
             self.controllers["cliente"]
         )
 
     def abrir_animais(self):
-        # Abrir a interface de animais com os dois controllers necessários.
+        """Abre a gestão de animais."""
         AnimalViewGUI(
             self.root,
             self.controllers["animal"],
@@ -159,7 +169,7 @@ class MenuViewGUI:
         )
 
     def abrir_consultas(self):
-        # Abrir a gestão de consultas com o funcionário autenticado.
+        """Abre a gestão de consultas."""
         consulta_view_gui.abrir(
             self.controllers["consulta"],
             self.controllers["animal"],
@@ -168,7 +178,7 @@ class MenuViewGUI:
         )
 
     def abrir_vacinacao(self):
-        # Abrir a gestão de vacinação com seleção de animais.
+        """Abre a gestão de vacinação."""
         vacina_view_gui.abrir(
             self.controllers["vacina"],
             self.controllers["animal"],
@@ -176,7 +186,7 @@ class MenuViewGUI:
         )
 
     def abrir_faturas(self):
-        # Abrir a faturação com todos os controllers necessários.
+        """Abre a gestão de faturas."""
         fatura_view_gui.abrir(
             self.controllers["fatura"],
             self.controllers["consulta"],
@@ -186,7 +196,7 @@ class MenuViewGUI:
         )
 
     def abrir_relatorios(self):
-        # Abrir os relatórios utilizando o respetivo controller.
+        """Abre os relatórios de gestão."""
         relatorio_view_gui.abrir(
             self.controllers["relatorio"],
             pai=self.root

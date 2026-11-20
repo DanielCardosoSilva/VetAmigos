@@ -1,105 +1,116 @@
-import jwt
-import datetime
-from datetime import timezone
+"""Gestão de sessões JWT do VetAmigos"""
+
 import os
-
-
-#Lab 2
-
-SECRET_KEY = os.environ.get("VETAMIGOS_SECRET", "dev-only-chave-longa-32chars")
-
-def criar_token(func) -> str:
-    agora = datetime.datetime.now(timezone.utc)
-    payload = {
-        "sub":  func.nome_utilizador,
-        "tipo": func.tipo,
-        "nome": func.nome,
-        "iat":  agora,
-        "exp":  agora + datetime.timedelta(hours=1),
-        "iss":  "vetamigos",
-    }
-    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
-
-def validar_token(token: str):
-    """Valida JWT. Devolve o payload, ou None se inválido/expirado."""
-    try:
-        return jwt.decode(
-            token, SECRET_KEY, algorithms=["HS256"], issuer="vetamigos"
-        )
-    except jwt.ExpiredSignatureError:
-        print("Sessão expirada — faça login novamente.")
-    except jwt.InvalidTokenError as e:
-        print(f"Token inválido: {e}")
-    return None
-    
-
-
-# login_view.py
-funcionario = controller.iniciar_sessao(utilizador, senha)
-token = criar_token(funcionario)
-menu_view.abrir(token, controllers)      # token, not the object
-
-# menu_view.py  (or wherever the token arrives)
-def abrir(self, token, controllers):
-    dados = validar_token(token)
-    if not dados:
-        self.voltar_ao_login()
-        return
-    self.utilizador_actual = dados           # sub / tipo / nome
-    # ... render menu by dados["tipo"]
-
-
-#Lab 4
-
-EXPIRY_HOURS = int(os.environ.get("VETAMIGOS_EXPIRY_HOURS", "1"))
-...
-"exp": agora + datetime.timedelta(hours=EXPIRY_HOURS),
-
 import uuid
+from datetime import datetime, timedelta, timezone
 
-_REVOGADOS = set()          # jti values logged out (module-level, in-memory)
-
-def criar_token(func) -> str:
-    agora = datetime.datetime.now(timezone.utc)
-    payload = {
-        "sub":  func.nome_utilizador,
-        "tipo": func.tipo,
-        "nome": func.nome,
-        "jti":  str(uuid.uuid4()),            # <-- new: unique id
-        "iat":  agora,
-        "exp":  agora + datetime.timedelta(hours=EXPIRY_HOURS),
-        "iss":  "vetamigos",
-    }
-    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+import jwt
 
 
-def validar_token(token: str):
-    try:
-        dados = jwt.decode(
-            token, SECRET_KEY, algorithms=["HS256"], issuer="vetamigos"
+EMISSOR = "vetamigos"
+DESTINATARIO = "vetamigos-desktop"
+_REVOGADOS = {}
+
+
+def _obter_chave():
+    """Obtém a chave JWT configurada fora do código-fonte."""
+    chave = os.environ.get("VETAMIGOS_SECRET", "")
+
+    if len(chave.encode("utf-8")) < 32:
+        raise RuntimeError(
+            "Configure VETAMIGOS_SECRET com uma chave "
+            "secreta de pelo menos 32 bytes."
         )
-    except jwt.ExpiredSignatureError:
-        print("Sessão expirada.")
-        return None
-    except jwt.InvalidTokenError as e:
-        print(f"Token inválido: {e}")
-        return None
 
-    if dados["jti"] in _REVOGADOS:            # <-- new: logout check
-        print("Sessão terminada (logout).")
-        return None
+    return chave
+
+
+def _limpar_revogados():
+    """Remove da lista de revogação os tokens já expirados."""
+    agora = datetime.now(timezone.utc).timestamp()
+
+    for identificador, expiracao in list(_REVOGADOS.items()):
+        if expiracao <= agora:
+            del _REVOGADOS[identificador]
+
+
+def criar_token(funcionario, mfa_confirmado=False):
+    """Emite um JWT após a autenticação completa do funcionário."""
+    if not getattr(funcionario, "ativo", False):
+        raise PermissionError("Conta desativada.")
+
+    if (
+        funcionario.tipo == "Proprietario"
+        and not mfa_confirmado
+    ):
+        raise PermissionError(
+            "É necessário concluir a verificação MFA."
+        )
+
+    duracao = int(os.environ.get("VETAMIGOS_EXPIRY_HOURS", "1"))
+
+    if duracao <= 0 or duracao > 24:
+        raise ValueError("Duração de sessão inválida.")
+
+    agora = datetime.now(timezone.utc)
+
+    payload = {
+        "sub": str(funcionario.nome_utilizador),
+        "tipo": funcionario.tipo,
+        "nome": funcionario.nome,
+        "mfa": bool(mfa_confirmado),
+        "jti": str(uuid.uuid4()),
+        "iss": EMISSOR,
+        "aud": DESTINATARIO,
+        "iat": agora,
+        "nbf": agora,
+        "exp": agora + timedelta(hours=duracao)
+    }
+
+    return jwt.encode(
+        payload,
+        _obter_chave(),
+        algorithm="HS256"
+    )
+
+
+def validar_token(token):
+    """Valida assinatura, campos, expiração e revogação do JWT."""
+    if not isinstance(token, str) or not token.strip():
+        raise jwt.InvalidTokenError("Token em falta.")
+
+    dados = jwt.decode(
+        token,
+        _obter_chave(),
+        algorithms=["HS256"],
+        issuer=EMISSOR,
+        audience=DESTINATARIO,
+        options={
+            "require": [
+                "sub", "tipo", "jti", "iss",
+                "aud", "iat", "nbf", "exp", "mfa"
+            ]
+        }
+    )
+
+    _limpar_revogados()
+
+    if dados["jti"] in _REVOGADOS:
+        raise jwt.InvalidTokenError("Sessão terminada.")
+
+    if dados["tipo"] == "Proprietario" and dados["mfa"] is not True:
+        raise jwt.InvalidTokenError("MFA não confirmado.")
+
     return dados
 
 
-def terminar_sessao(token: str) -> bool:      # <-- new: logout function
-    """Invalida o token imediatamente (logout)."""
-    dados = validar_token(token)
-    if dados:
-        _REVOGADOS.add(dados["jti"])
-        return True
-    return False
+def terminar_sessao(token):
+    """Revoga um JWT válido, impedindo a sua reutilização."""
+    try:
+        dados = validar_token(token)
+    except jwt.InvalidTokenError:
+        return False
 
-# logout_view.py
-def logout(self, token):
-    terminar_sessao(token)
-    self.voltar_ao_login()
+    _REVOGADOS[dados["jti"]] = dados["exp"]
+    _limpar_revogados()
+    return True

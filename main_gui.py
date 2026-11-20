@@ -1,31 +1,48 @@
-"""Ponto de entrada da aplicação VetAmigos em modo gráfico."""
+"""Ponto de entrada gráfico do VetAmigos com autenticação segura."""
 
 import tkinter as tk
 from tkinter import ttk, messagebox
 
 from db.connection import inicializar_bd
 from main import construir_controllers
+
 from src.models.proprietario import Proprietario
 from src.services.mfa_service import inicializar_mfa
+from src.services.session import criar_token, terminar_sessao
+from src.seguranca_controllers import proteger_controllers
+
 from src.views.login_view_gui import LoginViewGUI
 from src.views.mfa_view_gui import MfaViewGUI
 from src.views.menu_view_gui import MenuViewGUI
 
 
 def iniciar_aplicacao():
-    """Inicializa a base de dados e inicia o ciclo gráfico da aplicação."""
+    """Inicializa a aplicação e gere o ciclo de autenticação."""
     inicializar_bd()
     inicializar_mfa()
+
     controllers = construir_controllers()
 
     root = tk.Tk()
     root.title("VetAmigos")
     root.geometry("420x320")
 
+    token_atual = None
+
     def limpar_janela():
-        """Remove os widgets atuais sem destruir a janela principal."""
+        """Remove os widgets e as janelas secundárias existentes."""
         for widget in root.winfo_children():
             widget.destroy()
+
+    def encerrar_sessao():
+        """Revoga o JWT atual antes de regressar ao login."""
+        nonlocal token_atual
+
+        if token_atual:
+            terminar_sessao(token_atual)
+            token_atual = None
+
+        alternar_para_login()
 
     def alternar_para_login():
         """Apresenta o formulário de autenticação."""
@@ -38,9 +55,10 @@ def iniciar_aplicacao():
         )
 
     def apos_login_sucesso(funcionario):
-        """Encaminha para verificação MFA se for Proprietário ou abre diretamente o menu."""
+        """Encaminha o proprietário para o MFA."""
         if isinstance(funcionario, Proprietario):
             limpar_janela()
+
             MfaViewGUI(
                 root,
                 funcionario,
@@ -53,18 +71,42 @@ def iniciar_aplicacao():
         alternar_para_menu(funcionario)
 
     def alternar_para_menu(funcionario):
-        """Apresenta o menu correspondente ao funcionário autenticado."""
+        """Emite o JWT e apresenta o menu com controllers protegidos."""
+        nonlocal token_atual
+
+        try:
+            token_atual = criar_token(
+                funcionario,
+                mfa_confirmado=isinstance(funcionario, Proprietario)
+            )
+
+            controllers_protegidos = proteger_controllers(
+                controllers,
+                token_atual
+            )
+        except Exception as erro:
+            token_atual = None
+
+            messagebox.showerror(
+                "Erro na sessão",
+                str(erro),
+                parent=root
+            )
+            alternar_para_login()
+            return
+
         limpar_janela()
 
         MenuViewGUI(
             root,
             funcionario,
-            controllers,
-            on_logout=alternar_para_login
+            controllers_protegidos,
+            token=token_atual,
+            on_logout=encerrar_sessao
         )
 
     def configuracao_inicial():
-        """Cria a primeira conta de proprietário quando necessário."""
+        """Apresenta o registo inicial do proprietário."""
         limpar_janela()
 
         root.title("VetAmigos - Configuração Inicial")
@@ -75,7 +117,9 @@ def iniciar_aplicacao():
             text="Criar conta de proprietário",
             padding=20
         )
-        quadro.pack(fill="both", expand=True, padx=20, pady=20)
+        quadro.pack(
+            fill="both", expand=True, padx=20, pady=20
+        )
 
         ttk.Label(
             quadro,
@@ -96,9 +140,10 @@ def iniciar_aplicacao():
         ]
 
         for rotulo, variavel, secreta in campos:
-            ttk.Label(quadro, text=rotulo).pack(
-                anchor="w", pady=(4, 2)
-            )
+            # Criar os campos de identificação e palavra-passe.
+            ttk.Label(
+                quadro, text=rotulo
+            ).pack(anchor="w", pady=(4, 2))
 
             ttk.Entry(
                 quadro,
@@ -108,7 +153,7 @@ def iniciar_aplicacao():
             ).pack(fill="x", pady=(0, 6))
 
         def guardar_proprietario():
-            """Valida os dados e regista a conta inicial."""
+            """Valida os dados e regista o proprietário inicial."""
             nome = nome_var.get().strip()
             utilizador = utilizador_var.get().strip()
             palavra_passe = palavra_passe_var.get()
@@ -126,6 +171,17 @@ def iniciar_aplicacao():
                 messagebox.showerror(
                     "Palavras-passe diferentes",
                     "As palavras-passe não coincidem.",
+                    parent=root
+                )
+                return
+
+            if (
+                len(palavra_passe) < 8
+                or len(palavra_passe.encode("utf-8")) > 72
+            ):
+                messagebox.showwarning(
+                    "Palavra-passe inválida",
+                    "Utilize pelo menos 8 caracteres e no máximo 72 bytes.",
                     parent=root
                 )
                 return
@@ -149,6 +205,7 @@ def iniciar_aplicacao():
                 "A conta de proprietário foi criada com sucesso.",
                 parent=root
             )
+
             alternar_para_login()
 
         ttk.Button(
@@ -156,6 +213,18 @@ def iniciar_aplicacao():
             text="Criar Proprietário",
             command=guardar_proprietario
         ).pack(pady=15)
+
+    def fechar_aplicacao():
+        """Revoga a sessão antes de fechar a aplicação."""
+        nonlocal token_atual
+
+        if token_atual:
+            terminar_sessao(token_atual)
+            token_atual = None
+
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", fechar_aplicacao)
 
     if controllers["funcionario"].necessita_proprietario():
         configuracao_inicial()
