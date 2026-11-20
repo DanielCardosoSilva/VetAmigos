@@ -6,6 +6,7 @@ from tkinter import ttk, messagebox
 from db.connection import inicializar_bd
 from main import construir_controllers
 from src.models.proprietario import Proprietario
+from src.services.mfa_service import inicializar_mfa
 from src.views.login_view_gui import LoginViewGUI
 from src.views.mfa_view_gui import MfaViewGUI
 from src.views.menu_view_gui import MenuViewGUI
@@ -14,6 +15,7 @@ from src.views.menu_view_gui import MenuViewGUI
 def iniciar_aplicacao():
     """Inicializa a base de dados e inicia o ciclo gráfico da aplicação."""
     inicializar_bd()
+    inicializar_mfa()
     controllers = construir_controllers()
 
     root = tk.Tk()
