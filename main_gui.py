@@ -5,6 +5,7 @@ from tkinter import ttk, messagebox
 
 from db.connection import inicializar_bd
 from main import construir_controllers
+from src.services.mfa_service import inicializar_mfa
 from src.views.login_view_gui import LoginViewGUI
 from src.views.menu_view_gui import MenuViewGUI
 
@@ -12,6 +13,7 @@ from src.views.menu_view_gui import MenuViewGUI
 def iniciar_aplicacao():
     # Inicializar a base de dados e os controllers da aplicação.
     inicializar_bd()
+    inicializar_mfa()
     controllers = construir_controllers()
 
     root = tk.Tk()
