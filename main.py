@@ -28,9 +28,11 @@ from src.controllers.fatura_controller import FaturaController
 from src.controllers.relatorio_controller import RelatorioController
 from src.controllers.funcionario_controller import FuncionarioController
 from src.controllers.auth_controller import AuthController
-from src.views import login_view, menu_view, funcionario_view
+from src.views import login_view, menu_view, funcionario_view, mfa_view
+
 
 def construir_controllers():
+    """Constrói e devolve todos os controllers da aplicação."""
     cliente_repo = ClienteRepository()
     animal_repo = AnimalRepository()
     consulta_repo = ConsultaRepository()
@@ -62,7 +64,9 @@ def construir_controllers():
         "auth": AuthController(funcionario_service)
     }
 
+
 def main():
+    """Inicia a base de dados, o registo inicial e o ciclo de sessão."""
     inicializar_bd()
     controllers = construir_controllers()
     print("========== VETAMIGOS ==========")
@@ -72,7 +76,10 @@ def main():
         if funcionario is None:
             print("Aplicação encerrada. Até à próxima!")
             break
+        if not mfa_view.validar_mfa_proprietario(funcionario, controllers["auth"]):
+            continue
         menu_view.abrir(funcionario, controllers)
+
 
 if __name__ == "__main__":
     main()

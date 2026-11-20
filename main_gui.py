@@ -5,12 +5,14 @@ from tkinter import ttk, messagebox
 
 from db.connection import inicializar_bd
 from main import construir_controllers
+from src.models.proprietario import Proprietario
 from src.views.login_view_gui import LoginViewGUI
+from src.views.mfa_view_gui import MfaViewGUI
 from src.views.menu_view_gui import MenuViewGUI
 
 
 def iniciar_aplicacao():
-    # Inicializar a base de dados e os controllers da aplicação.
+    """Inicializa a base de dados e inicia o ciclo gráfico da aplicação."""
     inicializar_bd()
     controllers = construir_controllers()
 
@@ -19,22 +21,37 @@ def iniciar_aplicacao():
     root.geometry("420x320")
 
     def limpar_janela():
-        # Remover os widgets atuais sem destruir a janela principal.
+        """Remove os widgets atuais sem destruir a janela principal."""
         for widget in root.winfo_children():
             widget.destroy()
 
     def alternar_para_login():
-        # Apresentar o formulário de autenticação.
+        """Apresenta o formulário de autenticação."""
         limpar_janela()
 
         LoginViewGUI(
             root,
             controllers["auth"],
-            alternar_para_menu
+            apos_login_sucesso
         )
 
+    def apos_login_sucesso(funcionario):
+        """Encaminha para verificação MFA se for Proprietário ou abre diretamente o menu."""
+        if isinstance(funcionario, Proprietario):
+            limpar_janela()
+            MfaViewGUI(
+                root,
+                funcionario,
+                controllers["auth"],
+                on_mfa_success=alternar_para_menu,
+                on_mfa_cancel=alternar_para_login
+            )
+            return
+
+        alternar_para_menu(funcionario)
+
     def alternar_para_menu(funcionario):
-        # Apresentar o menu correspondente ao funcionário autenticado.
+        """Apresenta o menu correspondente ao funcionário autenticado."""
         limpar_janela()
 
         MenuViewGUI(
@@ -45,7 +62,7 @@ def iniciar_aplicacao():
         )
 
     def configuracao_inicial():
-        # Criar a primeira conta de proprietário quando necessário.
+        """Cria a primeira conta de proprietário quando necessário."""
         limpar_janela()
 
         root.title("VetAmigos - Configuração Inicial")
@@ -77,7 +94,6 @@ def iniciar_aplicacao():
         ]
 
         for rotulo, variavel, secreta in campos:
-            # Construir cada campo da conta inicial.
             ttk.Label(quadro, text=rotulo).pack(
                 anchor="w", pady=(4, 2)
             )
@@ -90,7 +106,7 @@ def iniciar_aplicacao():
             ).pack(fill="x", pady=(0, 6))
 
         def guardar_proprietario():
-            # Validar os dados e registar a conta inicial.
+            """Valida os dados e regista a conta inicial."""
             nome = nome_var.get().strip()
             utilizador = utilizador_var.get().strip()
             palavra_passe = palavra_passe_var.get()
@@ -139,7 +155,6 @@ def iniciar_aplicacao():
             command=guardar_proprietario
         ).pack(pady=15)
 
-    # Iniciar pelo registo inicial ou pelo login habitual.
     if controllers["funcionario"].necessita_proprietario():
         configuracao_inicial()
     else:
